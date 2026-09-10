@@ -1,0 +1,201 @@
+@import 'tailwindcss';
+
+/*
+ * Gas Control — a spreadsheet replacement, so the visual language is a
+ * ledger: dense tables, tabular numerals, and colour reserved for state
+ * (a failing control, a stock alert, a negative balance).
+ */
+
+@theme {
+  --color-ink-50:  #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d9dde5;
+  --color-ink-300: #b6bdcb;
+  --color-ink-400: #8b95a8;
+  --color-ink-500: #67718a;
+  --color-ink-600: #4d566d;
+  --color-ink-700: #3b4358;
+  --color-ink-800: #262c3c;
+  --color-ink-900: #171b26;
+  --color-ink-950: #0d1017;
+
+  --color-flame-500: #c2410c;
+  --color-flame-600: #9a3412;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+}
+
+:root {
+  color-scheme: light;
+  --surface: #ffffff;
+  --canvas: #f6f7f9;
+  --line: #d9dde5;
+  --line-soft: #eceef2;
+  --text: #171b26;
+  --text-soft: #67718a;
+  --ok-bg: #ecfdf5;
+  --ok-fg: #065f46;
+  --ok-line: #a7f3d0;
+  --fail-bg: #fef2f2;
+  --fail-fg: #991b1b;
+  --fail-line: #fecaca;
+  --warn-bg: #fffbeb;
+  --warn-fg: #92400e;
+  --warn-line: #fde68a;
+  --accent: #1d4ed8;
+  --accent-soft: #eff6ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --surface: #171b26;
+    --canvas: #0d1017;
+    --line: #313848;
+    --line-soft: #232937;
+    --text: #eceef2;
+    --text-soft: #8b95a8;
+    --ok-bg: #052e21;
+    --ok-fg: #6ee7b7;
+    --ok-line: #10603f;
+    --fail-bg: #3a1414;
+    --fail-fg: #fca5a5;
+    --fail-line: #7f1d1d;
+    --warn-bg: #3a2a08;
+    --warn-fg: #fcd34d;
+    --warn-line: #78530d;
+    --accent: #93b4fd;
+    --accent-soft: #16203a;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --surface: #171b26;
+  --canvas: #0d1017;
+  --line: #313848;
+  --line-soft: #232937;
+  --text: #eceef2;
+  --text-soft: #8b95a8;
+  --ok-bg: #052e21;
+  --ok-fg: #6ee7b7;
+  --ok-line: #10603f;
+  --fail-bg: #3a1414;
+  --fail-fg: #fca5a5;
+  --fail-line: #7f1d1d;
+  --warn-bg: #3a2a08;
+  --warn-fg: #fcd34d;
+  --warn-line: #78530d;
+  --accent: #93b4fd;
+  --accent-soft: #16203a;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Figures line up column-to-column; that is most of what makes a ledger
+   readable, and it is the one thing a spreadsheet gets right for free. */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  text-align: right;
+  white-space: nowrap;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.field {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+.field:disabled { opacity: 0.55; }
+
+.label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  margin-bottom: 0.3125rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--canvas); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(0.93); background: var(--accent); }
+
+table.ledger { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+table.ledger th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  background: var(--surface);
+}
+table.ledger th.num { text-align: right; }
+table.ledger td {
+  padding: 0.4375rem 0.625rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+table.ledger tbody tr:last-child td { border-bottom: 0; }
+table.ledger tbody tr:hover { background: var(--canvas); }
+table.ledger tfoot td {
+  padding: 0.5rem 0.625rem;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.scroll-x { overflow-x: auto; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .card { border: 1px solid #ccc; break-inside: avoid; }
+  @page { margin: 14mm; }
+}
