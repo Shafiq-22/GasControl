@@ -172,3 +172,36 @@ src/app/            one route per screen
 supabase/migrations/
 tests/
 ```
+
+## Production deployment
+
+The application must be merged into the production branch. The original `main`
+branch contained only a README; deploying that branch cannot run this app.
+Use the repository root, the Next.js framework preset, `npm ci`, and `npm run build`.
+`vercel.json` records these build settings.
+
+Configure `NEXT_PUBLIC_SUPABASE_URL` and either
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` in
+Vercel for both Production and Preview, then redeploy. Use the public project
+key, never a service-role key. A missing connection now opens a setup screen
+instead of crashing middleware.
+
+Apply all migrations through `0006_deployment_safety.sql` before using the
+repaired application. Migration 0006 creates a private, administrator-only
+upload bucket, prevents self-service role escalation, and enables `PER_VALUE`
+delivery allocation. It preserves existing ledger data. Use Supabase Auth's
+URL configuration to allow the production site's `/auth/callback` URL. Establish
+the owner's administrator account before allowing staff registrations; the
+original bootstrap makes the first account an administrator.
+
+Workbooks above 4 MB upload directly to private Supabase Storage. The import
+endpoint receives only an owner-scoped path, reads the file with the user's
+session, and deletes the temporary upload after parsing. This avoids Vercel's
+4.5 MB function request limit. Workbook size remains limited to 25 MB.
+
+Ledger reads are paginated, including API configurations with a smaller page
+cap. A failed query stops the report instead of becoming an empty register.
+Posting figures are recomputed on the server and failing controls block posting.
+`PER_VALUE` allocates delivery by ex-VAT refill value; when every refill value in
+a PO is zero, it falls back to cylinder quantities. `PER_LINE` remains available
+for compatibility with previously saved app settings.

@@ -1,3 +1,5 @@
+import { getSupabaseConfig } from '@/lib/supabase/config';
+import SetupPage from './setup/page';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Nav } from '@/components/nav';
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  if (!getSupabaseConfig()) return <html lang="en"><body><SetupPage /></body></html>;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
 

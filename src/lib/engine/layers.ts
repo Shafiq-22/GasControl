@@ -43,19 +43,22 @@ export function buildLayers(purchases: Purchase[], settings: Settings, standardR
   const vatDivisor = settings.purchase_includes_vat ? 1 + settings.purchase_vat_rate : 1;
 
   // PO-wide charge pools, so an amount entered once on line 1 reaches every line.
-  const poCharges = new Map<string, { charges: number; qty: number; lines: number }>();
+  const poCharges = new Map<string, { charges: number; qty: number; lines: number; value: number }>();
   for (const p of received) {
-    const pool = poCharges.get(p.po_no) ?? { charges: 0, qty: 0, lines: 0 };
+    const pool = poCharges.get(p.po_no) ?? { charges: 0, qty: 0, lines: 0, value: 0 };
     pool.charges += (p.delivery_charge + p.other_charges) / vatDivisor;
     pool.qty += p.qty_received;
     pool.lines += 1;
+    pool.value += p.qty_received * p.unit_refill_rate / vatDivisor;
     poCharges.set(p.po_no, pool);
   }
 
   const layers = received.map((p): CostLayer => {
     const pool = poCharges.get(p.po_no)!;
     const lineShare =
-      settings.delivery_allocation === 'PER_LINE'
+      settings.delivery_allocation === 'PER_VALUE'
+        ? (pool.value > 0 ? pool.charges * (p.qty_received * p.unit_refill_rate / vatDivisor) / pool.value : (pool.qty > 0 ? pool.charges * p.qty_received / pool.qty : 0))
+        : settings.delivery_allocation === 'PER_LINE'
         ? pool.charges / pool.lines
         : pool.qty > 0
           ? (pool.charges * p.qty_received) / pool.qty

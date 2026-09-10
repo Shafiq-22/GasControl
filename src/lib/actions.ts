@@ -1,5 +1,8 @@
 'use server';
 
+import { getLedger } from '@/lib/data';
+import { buildReport } from '@/lib/engine';
+import { postingFigures } from '@/lib/posting';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -191,7 +194,7 @@ const settingsSchema = z.object({
   valuation: z.enum(['FIFO_MONTHLY', 'WAC', 'STD']),
   honour_po_link: z.coerce.boolean(),
   trigger_rule: z.enum(['ON_ISSUE', 'ON_ISSUE_MONTH_END', 'ON_RETURN']),
-  delivery_allocation: z.enum(['PER_CYLINDER', 'PER_LINE']),
+  delivery_allocation: z.enum(['PER_CYLINDER', 'PER_VALUE', 'PER_LINE']),
   purchasing_department: optionalText,
   require_cost_code: z.coerce.boolean(),
   require_receiver: z.coerce.boolean(),
@@ -360,8 +363,6 @@ export async function recordPosting(_prev: ActionResult | null, formData: FormDa
   const schema = z.object({
     report_month: isoDate,
     reference: z.string().trim().min(1, 'Enter the accounting reference'),
-    line_count: z.coerce.number().int().nonnegative(),
-    total_amount: z.coerce.number(),
     notes: optionalText,
   });
   const parsed = schema.safeParse(Object.fromEntries(formData));
@@ -370,9 +371,18 @@ export async function recordPosting(_prev: ActionResult | null, formData: FormDa
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
 
+  if (!auth.user) return fail('Your session expired. Sign in again.');
+  let figures;
+  try {
+    const ledger = await getLedger();
+    const report = buildReport({ ...ledger, settings: { ...ledger.settings, report_month: parsed.data.report_month } });
+    figures = postingFigures(report);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : 'Unable to verify the posting.');
+  }
   const { error } = await supabase
     .from('postings')
-    .insert({ ...parsed.data, posted_by: auth.user?.id ?? null });
+    .insert({ ...parsed.data, ...figures, posted_by: auth.user.id });
 
   if (error) {
     if (error.code === '23505') return fail('That month has already been posted.');

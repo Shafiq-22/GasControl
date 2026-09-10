@@ -20,7 +20,7 @@ export const MOVEMENT_KINDS: MovementKind[] = [
 export type ValuationMethod = 'FIFO_MONTHLY' | 'WAC' | 'STD';
 export type ChargeTrigger = 'ON_ISSUE' | 'ON_ISSUE_MONTH_END' | 'ON_RETURN';
 export type RoundingRule = 'NEAREST' | 'UP' | 'DOWN';
-export type DeliveryAllocation = 'PER_CYLINDER' | 'PER_LINE';
+export type DeliveryAllocation = 'PER_CYLINDER' | 'PER_VALUE' | 'PER_LINE';
 export type EmptyPolicy = 'ASSUME_ALL_OUT' | 'IGNORE';
 export type AppRole = 'admin' | 'custodian' | 'viewer';
 

@@ -149,6 +149,7 @@ export function SettingsForm({
                 <select id="delivery_allocation" name="delivery_allocation" className="field"
                         defaultValue={settings.delivery_allocation} disabled={disabled}>
                   <option value="PER_CYLINDER">Per cylinder received</option>
+                  <option value="PER_VALUE">By refill value</option>
                   <option value="PER_LINE">Evenly per PO line</option>
                 </select>
               </Field>

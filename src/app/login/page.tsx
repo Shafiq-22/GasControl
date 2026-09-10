@@ -1,3 +1,4 @@
+import { safeReturnPath } from '@/lib/auth-redirect';
 import { LoginForm } from './form';
 
 export default async function LoginPage({
@@ -25,7 +26,7 @@ export default async function LoginPage({
             </p>
           </div>
         </div>
-        <LoginForm next={params.next ?? '/'} initialError={params.error} />
+        <LoginForm next={safeReturnPath(params.next)} initialError={params.error} />
       </div>
     </div>
   );

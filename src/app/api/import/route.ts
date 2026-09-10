@@ -1,12 +1,13 @@
+import { IMPORT_BUCKET, MAX_IMPORT_BYTES, isOwnedImportPath } from '@/lib/import-upload';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { date, number, parseWorkbook, text, yesNo, type ImportRow } from '@/lib/excel/import';
 import { MOVEMENT_KINDS, type MovementKind } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = MAX_IMPORT_BYTES;
 
 export interface ImportSummary {
   table: string;
@@ -33,14 +34,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Importing is administrator-only.' }, { status: 403 });
   }
 
-  const form = await request.formData();
-  const file = form.get('file');
-  const dryRun = form.get('dry_run') === 'on';
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'Choose a workbook to import.' }, { status: 400 });
+  let dryRun = true;
+  let file: Blob;
+  let storagePath: string | null = null;
+  try {
+    if (request.headers.get('content-type')?.includes('application/json')) {
+      const body = await request.json();
+      if (!isOwnedImportPath(body.storagePath, auth.user.id)) {
+        return NextResponse.json({ error: 'Invalid upload reference.' }, { status: 400 });
+      }
+      storagePath = body.storagePath;
+      dryRun = body.dryRun !== false;
+      const { data, error } = await supabase.storage.from(IMPORT_BUCKET).download(storagePath!);
+      if (error || !data) return NextResponse.json({ error: 'The private upload could not be read. Upload it again.' }, { status: 400 });
+      file = data;
+    } else {
+      const form = await request.formData();
+      dryRun = form.get('dry_run') === 'on';
+      const input = form.get('file');
+      if (!(input instanceof File)) return NextResponse.json({ error: 'Choose a workbook to import.' }, { status: 400 });
+      file = input;
+    }
+  } catch {
+    return NextResponse.json({ error: 'The upload request could not be read.' }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
+    if (storagePath) await supabase.storage.from(IMPORT_BUCKET).remove([storagePath]);
     return NextResponse.json({ error: 'That file is larger than 25 MB.' }, { status: 413 });
   }
 
@@ -52,6 +71,8 @@ export async function POST(request: NextRequest) {
       { error: `That file could not be read as a workbook: ${(error as Error).message}` },
       { status: 400 },
     );
+  } finally {
+    if (storagePath) await supabase.storage.from(IMPORT_BUCKET).remove([storagePath]);
   }
 
   const summaries: ImportSummary[] = [];

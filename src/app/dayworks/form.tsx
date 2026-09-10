@@ -34,9 +34,9 @@ export function PostingForm({
 
           <div className="mt-4 flex items-center justify-between gap-3">
             <p className="text-xs" style={{ color: 'var(--text-soft)' }}>
-              {blocked ? 'Controls are failing; posting is not recommended.' : `${lineCount} line(s).`}
+              {blocked ? 'Resolve the failed controls before posting.' : `${lineCount} line(s).`}
             </p>
-            <Submit>Record posting</Submit>
+            {blocked ? <button className="btn btn-primary" disabled>Posting blocked</button> : <Submit>Record posting</Submit>}
           </div>
         </>
       )}

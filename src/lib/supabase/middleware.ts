@@ -1,3 +1,4 @@
+import { getSupabaseConfig } from './config';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -5,11 +6,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC = ['/login', '/auth'];
 
 export async function updateSession(request: NextRequest) {
+  const config = getSupabaseConfig();
+  if (!config) {
+    if (request.nextUrl.pathname === '/setup') return NextResponse.next();
+    if (request.nextUrl.pathname.startsWith('/api/')) return NextResponse.json({ error: 'Database connection is not configured.' }, { status: 503 });
+    const url = request.nextUrl.clone(); url.pathname = '/setup'; url.search = '';
+    return NextResponse.redirect(url);
+  }
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    config.url,
+    config.key,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -31,14 +39,18 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   if (data.user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.search = '';
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   return response;

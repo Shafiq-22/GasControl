@@ -1,5 +1,7 @@
 'use client';
 
+import { createClient } from '@/lib/supabase/client';
+import { IMPORT_BUCKET, MAX_IMPORT_BYTES, DIRECT_UPLOAD_BYTES } from '@/lib/import-upload';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge, Card, Notice } from '@/components/ui';
@@ -24,21 +26,44 @@ export function ImportForm() {
     setError('');
     setOutcome(null);
 
-    const response = await fetch('/api/import', {
-      method: 'POST',
-      body: new FormData(event.currentTarget),
-    });
-    const body = await response.json();
-
-    if (!response.ok) {
-      setError(body.error ?? 'The import failed.');
+    const form = new FormData(event.currentTarget);
+    const file = form.get('file');
+    let uploadedPath: string | null = null;
+    try {
+      if (!(file instanceof File)) throw new Error('Choose a workbook.');
+      if (file.size > MAX_IMPORT_BYTES) throw new Error('The workbook must be 25 MB or smaller.');
+      let response: Response;
+      if (file.size > DIRECT_UPLOAD_BYTES) {
+        const supabase = createClient();
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) throw new Error('Your session expired. Sign in again.');
+        uploadedPath = `${auth.user.id}/${crypto.randomUUID()}.xlsx`;
+        const { error: uploadError } = await supabase.storage.from(IMPORT_BUCKET).upload(uploadedPath, file, {
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', upsert: false,
+        });
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}. Ask the administrator to check the import storage setup.`);
+        response = await fetch('/api/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePath: uploadedPath, dryRun: form.get('dry_run') === 'on' }),
+        });
+      } else {
+        response = await fetch('/api/import', { method: 'POST', body: form });
+      }
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error(`The server could not finish the import (${response.status}). Retry or ask the administrator to check the deployment logs.`);
+      }
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? 'The import failed.');
+      setOutcome(body as Outcome);
+      if (!body.dryRun) router.refresh();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'The upload failed. Please retry.');
+    } finally {
+      if (uploadedPath) {
+        try { await createClient().storage.from(IMPORT_BUCKET).remove([uploadedPath]); } catch { /* The server also removes completed uploads. */ }
+      }
       setBusy(false);
-      return;
     }
-
-    setOutcome(body as Outcome);
-    setBusy(false);
-    if (!body.dryRun) router.refresh();
   }
 
   const totalWritten = outcome?.summaries.reduce((t, s) => t + s.written, 0) ?? 0;

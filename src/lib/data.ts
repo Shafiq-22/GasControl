@@ -1,3 +1,4 @@
+import { readAllRows } from '@/lib/supabase/pagination';
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { buildReport, type Report } from '@/lib/engine';
@@ -27,13 +28,13 @@ export const getLedger = cache(async (): Promise<Ledger> => {
   const [settings, departments, items, costCodes, personnel, suppliers, purchases, movements] =
     await Promise.all([
       supabase.from('settings').select('*').single(),
-      supabase.from('departments').select('*').order('sort_order').order('code'),
-      supabase.from('gas_items').select('*').order('sort_order').order('item_code'),
-      supabase.from('cost_codes').select('*').order('code'),
-      supabase.from('personnel').select('*').order('name'),
-      supabase.from('suppliers').select('*').order('vendor_no'),
-      supabase.from('purchases').select('*').order('po_date').order('transaction_id'),
-      supabase.from('movements').select('*').order('moved_on').order('transaction_id'),
+      readAllRows('departments', (from, to) => supabase.from('departments').select('*').order('sort_order').order('code').range(from, to)),
+      readAllRows('gas_items', (from, to) => supabase.from('gas_items').select('*').order('sort_order').order('item_code').range(from, to)),
+      readAllRows('cost_codes', (from, to) => supabase.from('cost_codes').select('*').order('code').range(from, to)),
+      readAllRows('personnel', (from, to) => supabase.from('personnel').select('*').order('name').order('employee_no').range(from, to)),
+      readAllRows('suppliers', (from, to) => supabase.from('suppliers').select('*').order('vendor_no').range(from, to)),
+      readAllRows('purchases', (from, to) => supabase.from('purchases').select('*').order('po_date').order('transaction_id').range(from, to)),
+      readAllRows('movements', (from, to) => supabase.from('movements').select('*').order('moved_on').order('transaction_id').range(from, to)),
     ]);
 
   if (settings.error) {
@@ -42,13 +43,13 @@ export const getLedger = cache(async (): Promise<Ledger> => {
 
   return {
     settings: settings.data as Settings,
-    departments: (departments.data ?? []) as Department[],
-    items: (items.data ?? []) as GasItem[],
-    costCodes: (costCodes.data ?? []) as CostCode[],
-    personnel: (personnel.data ?? []) as Person[],
-    suppliers: (suppliers.data ?? []) as Supplier[],
-    purchases: (purchases.data ?? []) as Purchase[],
-    movements: (movements.data ?? []) as Movement[],
+    departments: departments as Department[],
+    items: items as GasItem[],
+    costCodes: costCodes as CostCode[],
+    personnel: personnel as Person[],
+    suppliers: suppliers as Supplier[],
+    purchases: purchases as Purchase[],
+    movements: movements as Movement[],
   };
 });
 
@@ -63,8 +64,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
 
 export const getPostings = cache(async (): Promise<Posting[]> => {
   const supabase = await createClient();
-  const { data } = await supabase.from('postings').select('*').order('report_month', { ascending: false });
-  return (data ?? []) as Posting[];
+  return readAllRows<Posting>('postings', (from, to) => supabase.from('postings').select('*').order('report_month', { ascending: false }).order('id').range(from, to));
 });
 
 export function canRecord(profile: Profile | null): boolean {
