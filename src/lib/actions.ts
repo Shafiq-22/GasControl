@@ -326,7 +326,7 @@ export async function saveMasterRow(_prev: ActionResult | null, formData: FormDa
 export async function setUserRole(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const schema = z.object({
     id: z.string().uuid(),
-    role: z.enum(['admin', 'custodian', 'viewer']),
+    role: z.enum(['admin', 'custodian', 'viewer', 'pending']),
   });
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail('Choose a valid role.');

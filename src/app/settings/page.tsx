@@ -13,6 +13,13 @@ export default async function SettingsPage() {
 
   const supabase = await createClient();
   const { data: profiles } = await supabase.from('profiles').select('*').order('email');
+  // Accounts waiting on approval are the actionable ones, so they come first.
+  const people = ((profiles ?? []) as Profile[]).sort(
+    (a, b) =>
+      Number(b.role === 'pending') - Number(a.role === 'pending') ||
+      a.email.localeCompare(b.email),
+  );
+  const awaiting = people.filter((p) => p.role === 'pending').length;
 
   return (
     <>
@@ -36,7 +43,11 @@ export default async function SettingsPage() {
       <Card
         className="mt-4"
         title="People and access"
-        description="Viewers read. Custodians record purchases and movements. Administrators also configure the store."
+        description={
+          awaiting > 0
+            ? `${awaiting} account(s) waiting for approval. A new signup can see nothing until you give it a role.`
+            : 'Viewers read. Custodians record purchases and movements. Administrators also configure the store.'
+        }
         bodyClassName="scroll-x"
       >
         <table className="ledger">
@@ -44,7 +55,7 @@ export default async function SettingsPage() {
             <tr><th>Email</th><th>Name</th><th>Role</th>{admin && <th />}</tr>
           </thead>
           <tbody>
-            {((profiles ?? []) as Profile[]).map((person) => (
+            {people.map((person) => (
               <RoleRow
                 key={person.id}
                 person={person}

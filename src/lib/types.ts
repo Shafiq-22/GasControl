@@ -22,7 +22,8 @@ export type ChargeTrigger = 'ON_ISSUE' | 'ON_ISSUE_MONTH_END' | 'ON_RETURN';
 export type RoundingRule = 'NEAREST' | 'UP' | 'DOWN';
 export type DeliveryAllocation = 'PER_CYLINDER' | 'PER_VALUE' | 'PER_LINE';
 export type EmptyPolicy = 'ASSUME_ALL_OUT' | 'IGNORE';
-export type AppRole = 'admin' | 'custodian' | 'viewer';
+/** 'pending' is a new signup that an administrator has not yet approved. */
+export type AppRole = 'admin' | 'custodian' | 'viewer' | 'pending';
 
 export interface Settings {
   company_name: string;

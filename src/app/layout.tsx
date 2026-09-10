@@ -3,6 +3,7 @@ import SetupPage from './setup/page';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Nav } from '@/components/nav';
+import { AwaitingApproval } from './pending/screen';
 import { getProfile, getReport } from '@/lib/data';
 import { monthLabel } from '@/lib/engine/dates';
 import { createClient } from '@/lib/supabase/server';
@@ -26,7 +27,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  const [profile, report] = await Promise.all([getProfile(), getReport().catch(() => null)]);
+  const profile = await getProfile();
+
+  // An unapproved account can read nothing, so show it why rather than letting
+  // every page fail on a permission error.
+  if (!profile || profile.role === 'pending') {
+    return (
+      <html lang="en">
+        <body><AwaitingApproval email={auth.user.email ?? ''} /></body>
+      </html>
+    );
+  }
+
+  const report = await getReport().catch(() => null);
 
   return (
     <html lang="en">

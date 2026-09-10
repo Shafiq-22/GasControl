@@ -96,8 +96,9 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
         </button>
 
         <p className="mt-1 text-xs" style={{ color: 'var(--text-soft)' }}>
-          New accounts start read-only. An administrator grants recording rights
-          from the Settings page. The first account created administers the store.
+          A new account can see nothing until an administrator approves it and
+          gives it a role. If you are expecting access and do not have it, ask
+          the store custodian.
         </p>
       </form>
     </Card>

@@ -51,3 +51,33 @@ describe('production data controls', () => {
     expect(figures.total_amount).toBeCloseTo(report.dayworks.reduce((t, line) => t + line.amount, 0), 2);
   });
 });
+
+describe('supabase connection defaults', () => {
+  it('falls back to the store\'s own project when no env var is set', async () => {
+    const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const previousKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+    const { getSupabaseConfig } = await import('@/lib/supabase/config');
+    const config = getSupabaseConfig();
+    expect(config).not.toBeNull();
+    expect(config!.url).toMatch(/^https:\/\/.+\.supabase\.co$/);
+    // Only ever a publishable key: a service-role key would be a leak.
+    expect(config!.key.startsWith('sb_publishable_') || config!.key.startsWith('eyJ')).toBe(true);
+    expect(config!.key).not.toContain('service_role');
+
+    if (previousUrl) process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousKey) process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousKey;
+  });
+
+  it('lets an environment variable override the default', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://other.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_other';
+    const { getSupabaseConfig } = await import('@/lib/supabase/config');
+    expect(getSupabaseConfig()!.url).toBe('https://other.supabase.co');
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  });
+});

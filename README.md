@@ -92,20 +92,36 @@ into SQL, and it keeps the calculation in one place.
 
 | Role | Can |
 | --- | --- |
+| `pending` | Nothing. A new signup starts here. |
 | `viewer` | Read everything. |
 | `custodian` | Also record purchases and movements, and record a posting. |
 | `admin` | Also edit settings and master data, import, and set roles. |
 
-The first account to sign up becomes the administrator. Everyone else starts
-as a viewer.
+**Signing up grants nothing.** The publishable key is public by design, so
+anyone who has it can reach the auth endpoints and create an account — that is
+only safe if an account is worth nothing until someone approves it. Every read
+policy requires an approved role, so a new signup sees an "awaiting approval"
+screen and no data. An administrator gives it a role in Settings.
+
+The first administrator comes from the `auth_allowlist` table rather than from
+whoever signs up first, which would otherwise be a race anyone could win:
+
+```sql
+insert into auth_allowlist (email, role) values ('you@example.com', 'admin');
+```
 
 ## Running it
 
 ```bash
 npm install
-cp .env.example .env.local     # fill in your Supabase URL and publishable key
 npm run dev
 ```
+
+The store's Supabase project is built in as the default, so there is nothing to
+configure. To point a deployment at a different project, set
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`; they override
+the defaults. If neither a default nor an override resolves, every route serves
+a setup page rather than failing.
 
 Against a fresh Supabase project:
 

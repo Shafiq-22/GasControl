@@ -22,8 +22,15 @@ export function RoleRow({
       </td>
       <td>{person.full_name ?? '—'}</td>
       <td>
-        <Badge tone={person.role === 'admin' ? 'ok' : person.role === 'custodian' ? 'warn' : 'neutral'}>
-          {person.role}
+        <Badge
+          tone={
+            person.role === 'admin' ? 'ok'
+            : person.role === 'custodian' ? 'warn'
+            : person.role === 'pending' ? 'fail'
+            : 'neutral'
+          }
+        >
+          {person.role === 'pending' ? 'awaiting approval' : person.role}
         </Badge>
       </td>
       {editable && (
@@ -32,7 +39,8 @@ export function RoleRow({
             {() => (
               <>
                 <input type="hidden" name="id" value={person.id} />
-                <select name="role" className="field w-32 py-1 text-xs" defaultValue={person.role}>
+                <select name="role" className="field w-36 py-1 text-xs" defaultValue={person.role}>
+                  <option value="pending">no access</option>
                   <option value="viewer">viewer</option>
                   <option value="custodian">custodian</option>
                   <option value="admin">admin</option>
